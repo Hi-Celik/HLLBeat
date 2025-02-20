@@ -1,0 +1,219 @@
+
+.background {
+  position:fixed;
+    justify-content: center;
+    top: 0px;
+    left: 0px;
+    width: 100vw;
+    height:100vh;
+    box-sizing: border-box; 
+    background-color: rgb(59, 50, 83);
+    z-index: -1;
+}
+
+.main {
+  position: relative;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    height:100%;
+    box-sizing: border-box;
+}
+.container {
+  position: relative;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    height:100%;
+    box-sizing: border-box;
+}
+.pattern {
+    position: relative;
+    width:fit-content;
+    height: fit-content;
+    padding: 20px;
+    display: flex;
+    margin-top: 50px;
+    flex-direction: column;
+    align-items: center;
+    background-color: rgb(20, 2, 47);
+    border-radius: 10px;
+    box-shadow: 0px 5px 10px 2px rgba(0, 0, 0, 0.472);
+}
+.addPattern {
+    margin: 10px;
+    width: 150px;
+    height: 40px;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 10px;
+}
+.playButton {
+    margin: 10px;
+    width: 150px;
+    height: 40px;
+    font-size: 32px;
+    cursor: pointer;
+    border-radius: 10px;
+}
+.row {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 10px;
+  }
+  
+.box {
+    display: inline-block;
+    width: 4vw;
+    height: 4vw;
+    box-sizing: border-box;
+    /*border: 1px solid #ccc;*/
+    text-align: center;
+    vertical-align: top;
+    background-color: lightslategrey;
+    border-radius: 10px;
+    box-shadow: 0px 5px 10px 2px rgba(255, 255, 255, 0.472);
+}
+
+.delete-box {
+    background-color: red;
+    color: white;
+    width: 4vw;
+    height: 4vw;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    border-radius: 5px;
+  }
+
+.delete-box i {
+    font-size: 20px; /* Çöp kutusu ikonunun boyutu */
+  }
+
+.selected {
+    background-color: rgb(229, 202, 167);
+  }
+.dark-box {
+    background-color:rgb(83, 90, 100);
+  }
+  
+.light-box {
+    background-color: lightslategrey;
+  }
+
+  .glowing {
+    box-shadow: 0 0 15px 8px rgb(255, 255, 255);
+    transition: box-shadow 0.1s ease-in-out, opacity 0.6s ease-in-out;
+    opacity: 1;
+  }
+
+  .non-selected-glowing {
+    box-shadow: 0px 5px 15px 5px rgb(233, 10, 10);
+    transition: box-shadow 0.2s ease-in-out, opacity 0.6s ease-in-out;
+    opacity: 1;
+  }
+
+  .fading {
+    opacity: 0;
+    box-shadow: none;
+  }
+  .BPM {
+    width: 150px;
+    height: 40px;
+    font-size: 36px;
+    background-color: rgb(68, 71, 93);
+    border-style: hidden;
+    color: beige;
+    border-radius: 10px;
+    text-align: center;
+  }
+  .selectSound {
+    background-color: rgb(81, 105, 184);
+    color: white;
+    width: 4vw;
+    height: 4vw;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    border-radius: 5px;
+    font-size: 20px;
+  }
+
+  .modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background:rgb(20, 2, 47);
+    border-radius: 5px;
+    box-shadow: 0px 5px 10px 2px rgba(0, 0, 0, 0.472);
+    text-align: center;
+    z-index: 1000;
+    
+  }
+  
+  .modal-content {
+    display: flex;
+    flex-direction: column;
+    color: rgb(187, 164, 187);
+  }
+  .modal-content ul {
+    list-style: none;
+    padding-left: 0;
+    height: 300px; /* Sabit yükseklik */
+    overflow-y:auto;
+  }
+  
+  .selectSoundButton {
+    width: 200px;
+    height: 40px;
+    background-color: rgb(101, 89, 101);
+    cursor: pointer;
+    border-style: none;
+  }
+  .playSoundPreview {
+    width: 40px;
+    height: 40px;
+    background-color: rgb(101, 89, 101);
+    cursor: pointer;
+    border-style: none;
+  }
+  .closeSoundSelectorButton {
+    width: 200px;
+    height: 30px;
+    margin-top: 2px;
+    background-color: rgb(101, 89, 101);
+    cursor: pointer;
+    border-style: none;
+    align-self: center;
+  }
+  /* Kaydırma çubuğunun kendisi */
+::-webkit-scrollbar {
+  width: 10px; /* Genişlik */
+  height: 10px; /* Yükseklik */
+}
+::-webkit-scrollbar:hover {
+  width: 20px; /* Genişlik */
+  height: 20px; /* Yükseklik */
+}
+
+/* Kaydırma çubuğunun yolu (arkasındaki alan) */
+::-webkit-scrollbar-track {
+  background: rgb(101, 89, 101);; /* Arka plan rengi */
+}
+
+/* Kaydırma çubuğunun başlığı (kaydırılan kısım) */
+::-webkit-scrollbar-thumb {
+  background: rgb(20, 2, 47);; /* Renk */
+  border-radius: 5px; /* Köşe yuvarlaklığı */
+}
+
+/* Kaydırma çubuğu başlığına fare ile gelindiğinde */
+::-webkit-scrollbar-thumb:hover {
+  background: #555; /* Renk */
+  width: 20px;
+  height: 20px; 
+}
+  

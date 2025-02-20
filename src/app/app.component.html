@@ -1,0 +1,70 @@
+
+<main class="main">
+  <div class="container">
+    
+    <!-- --------------------------------/patterns----------------------------------- -->
+    <div class="pattern">
+      <div>
+        <button (click)="toggleGlowEffect()" class="playButton"> {{ isGlowingActive ? 'STOP' : 'PLAY' }}</button>
+        <!-- Animasyon süresini ayarlamak için input -->
+        <input type="number" class="BPM" [(ngModel)]="BPM" 
+        (ngModelChange)="onTransitionTimeChange($event)" 
+        placeholder="BPM" 
+        [min]="20" 
+        [max]="500" 
+        [step]="1"/>
+      </div>
+      <div *ngFor="let row of rows; let rowIndex = index" class="row">
+        <!--<div *ngFor="let i of [].constructor(17); let index = index" -->
+          <div *ngFor="let color of row.colors; let index = index" 
+            [ngClass]="getBoxClass(rowIndex, index)" 
+            (click)="onBoxClick(rowIndex, index)" 
+            class="box">
+            <!--{{ index + 1 }}-->
+            <div *ngIf="index === 16" class="delete-box" (click)="deleteRow(rowIndex, $event)">
+              <i class="fas fa-trash-alt"></i> <!-- Çöp kutusu ikonu -->
+            </div>
+            <div *ngIf="index === 17" class="selectSound" (click)="openSoundSelector(rowIndex)">
+              <i class="fa-solid fa-angles-down"></i> <!-- indir ikonu -->
+            </div>
+
+        </div>
+      </div>
+      <div>
+        <button (click)="addRow()" class="addPattern">+</button>
+      </div>
+    </div>
+     <!-- ---------------------------------/patterns---------------------------------- -->
+    
+<!-- Ses Seçme Popup'ı -->
+<div *ngIf="isSoundSelectorOpen" class="modal">
+  <div class="modal-content">
+    <h3>Select a sound</h3>
+    <ul>
+      <li *ngFor="let sound of availableSounds">
+        <button *ngIf="selectedRowIndex !== null" (click)="selectSound(selectedRowIndex, sound)" class ="selectSoundButton">
+          {{ sound }}
+        </button>
+        <button (click)="playSoundPreview(sound)" class="playSoundPreview">
+          <i class="fa-regular fa-circle-play"></i>
+        </button>
+      </li>
+    </ul>
+    <button (click)="closeSoundSelector()" class="closeSoundSelectorButton">Kapat</button>
+  </div>
+</div>
+   
+  </div>
+</main>
+<div class = "background"></div>
+
+<!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
+<!-- * * * * * * * * * * * The content above * * * * * * * * * * * * -->
+<!-- * * * * * * * * * * is only a placeholder * * * * * * * * * * * -->
+<!-- * * * * * * * * * * and can be replaced.  * * * * * * * * * * * -->
+<!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
+<!-- * * * * * * * * * * End of Placeholder  * * * * * * * * * * * * -->
+<!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
+
+
+<router-outlet />
