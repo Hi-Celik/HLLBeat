@@ -1,70 +1,1018 @@
+<div class="studio-shell" [class.dragging-cursor]="isDraggingClip()">
+  <!-- Ambient Background Glows -->
+  <div class="ambient-orb orb-1"></div>
+  <div class="ambient-orb orb-2"></div>
 
-<main class="main">
-  <div class="container">
-    
-    <!-- --------------------------------/patterns----------------------------------- -->
-    <div class="pattern">
-      <div>
-        <button (click)="toggleGlowEffect()" class="playButton"> {{ isGlowingActive ? 'STOP' : 'PLAY' }}</button>
-        <!-- Animasyon süresini ayarlamak için input -->
-        <input type="number" class="BPM" [(ngModel)]="BPM" 
-        (ngModelChange)="onTransitionTimeChange($event)" 
-        placeholder="BPM" 
-        [min]="20" 
-        [max]="500" 
-        [step]="1"/>
-      </div>
-      <div *ngFor="let row of rows; let rowIndex = index" class="row">
-        <!--<div *ngFor="let i of [].constructor(17); let index = index" -->
-          <div *ngFor="let color of row.colors; let index = index" 
-            [ngClass]="getBoxClass(rowIndex, index)" 
-            (click)="onBoxClick(rowIndex, index)" 
-            class="box">
-            <!--{{ index + 1 }}-->
-            <div *ngIf="index === 16" class="delete-box" (click)="deleteRow(rowIndex, $event)">
-              <i class="fas fa-trash-alt"></i> <!-- Çöp kutusu ikonu -->
-            </div>
-            <div *ngIf="index === 17" class="selectSound" (click)="openSoundSelector(rowIndex)">
-              <i class="fa-solid fa-angles-down"></i> <!-- indir ikonu -->
-            </div>
-
+  <main class="daw-workspace">
+    <!-- ==================== TOP STUDIO HEADER & TRANSPORT BAR ==================== -->
+    <header class="transport-bar">
+      <!-- Brand Identity -->
+      <div class="brand-section">
+        <div class="brand-logo" [class.logo-pulsing]="isPlaying()">
+          <i class="fa-solid fa-wave-square"></i>
+        </div>
+        <div class="brand-text">
+          <div class="brand-title-row">
+            <h1>HLL<span>BEAT</span></h1>
+            <span class="pro-badge">STUDIO DAW</span>
+          </div>
+          <p class="brand-subtitle">Web Audio Step Sequencer & Playlist</p>
         </div>
       </div>
-      <div>
-        <button (click)="addRow()" class="addPattern">+</button>
+
+      <!-- Main Transport Controls (Mode Switch, Play/Stop, BPM, Swing, Step Display) -->
+      <div class="transport-controls">
+        <!-- PAT / SONG Mode Switcher -->
+        <div class="mode-switch-group" title="Playback Mode: Selected Pattern (PAT) or Full Arrangement (SONG)">
+          <button
+            type="button"
+            class="mode-btn"
+            [class.active]="playbackMode() === 'pattern'"
+            (click)="setPlaybackMode('pattern')"
+          >
+            PAT
+          </button>
+          <button
+            type="button"
+            class="mode-btn song-mode"
+            [class.active]="playbackMode() === 'song'"
+            (click)="setPlaybackMode('song')"
+          >
+            SONG
+          </button>
+        </div>
+
+        <button
+          type="button"
+          class="play-btn"
+          [class.playing]="isPlaying()"
+          (click)="toggleGlowEffect()"
+          title="Play / Stop (Spacebar)"
+        >
+          <i
+            class="fa-solid"
+            [class.fa-stop]="isPlaying()"
+            [class.fa-play]="!isPlaying()"
+          ></i>
+          <span>{{ isPlaying() ? 'STOP' : 'PLAY' }}</span>
+        </button>
+
+        <!-- Digital BPM Module -->
+        <div class="lcd-module bpm-module">
+          <span class="lcd-label">TEMPO (BPM)</span>
+          <div class="bpm-control-row">
+            <button
+              type="button"
+              class="step-adj-btn"
+              (click)="adjustBpm(-5)"
+              title="-5 BPM"
+            >
+              -
+            </button>
+            <input
+              type="number"
+              class="bpm-input"
+              [ngModel]="bpm()"
+              (ngModelChange)="onBpmChange($event)"
+              min="40"
+              max="300"
+              step="1"
+            />
+            <button
+              type="button"
+              class="step-adj-btn"
+              (click)="adjustBpm(5)"
+              title="+5 BPM"
+            >
+              +
+            </button>
+          </div>
+        </div>
+
+        <!-- Digital Step / Beat Counter LCD -->
+        <div class="lcd-module step-lcd">
+          <span class="lcd-label">
+            {{ playbackMode() === 'song' ? 'BEAT' : 'STEP' }}
+          </span>
+          <div class="lcd-value">
+            @if (isPlaying() && playbackMode() === 'song' && currentSongBeat() >= 0) {
+              {{ (currentSongBeat() + 1).toString().padStart(2, '0') }}<span class="lcd-dim">/{{ totalTimelineBeats() }}</span>
+            } @else if (isPlaying() && currentStep() >= 0) {
+              {{ (currentStep() + 1).toString().padStart(2, '0') }}<span class="lcd-dim">/16</span>
+            } @else {
+              --<span class="lcd-dim">/{{ playbackMode() === 'song' ? totalTimelineBeats() : 16 }}</span>
+            }
+          </div>
+        </div>
+
+        <!-- Swing Control -->
+        <div class="slider-module">
+          <div class="slider-header">
+            <span>SWING</span>
+            <span class="slider-val">{{ swing() }}%</span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="60"
+            step="5"
+            [ngModel]="swing()"
+            (ngModelChange)="swing.set(+$event)"
+            class="studio-range"
+          />
+        </div>
+
+        <!-- Master Volume & Output Peak Meter -->
+        <div class="slider-module">
+          <div class="slider-header">
+            <span>MASTER</span>
+            <span class="slider-val">{{ (audioService.masterVolume() * 100) | number:'1.0-0' }}%</span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.02"
+            [ngModel]="audioService.masterVolume()"
+            (ngModelChange)="audioService.setMasterVolume(+$event)"
+            class="studio-range"
+          />
+          <div class="peak-meter-track">
+            <div
+              class="peak-meter-fill"
+              [style.width.%]="audioService.peakLevel()"
+            ></div>
+          </div>
+        </div>
       </div>
-    </div>
-     <!-- ---------------------------------/patterns---------------------------------- -->
-    
-<!-- Ses Seçme Popup'ı -->
-<div *ngIf="isSoundSelectorOpen" class="modal">
-  <div class="modal-content">
-    <h3>Select a sound</h3>
-    <ul>
-      <li *ngFor="let sound of availableSounds">
-        <button *ngIf="selectedRowIndex !== null" (click)="selectSound(selectedRowIndex, sound)" class ="selectSoundButton">
-          {{ sound }}
+
+      <!-- Audio Engine Status -->
+      <div class="engine-status">
+        <div class="buffer-pill" [class.ready]="!audioService.isPreloading()">
+          <span class="buffer-dot"></span>
+          @if (audioService.isPreloading()) {
+            <span>BUFFER {{ audioService.loadingProgress() }}%</span>
+          } @else {
+            <span>{{ audioService.loadedCount() }} SAMPLES READY</span>
+          }
+        </div>
+      </div>
+    </header>
+
+    <!-- ==================== PRESET & PATTERN TOOLBAR ==================== -->
+    <section class="pattern-toolbar">
+      <!-- Active Playlist Row / Clip Indicator -->
+      <div class="active-pattern-banner" [attr.data-accent]="activePlaylistRow()?.accentColor || 'cyan'">
+        <span class="pattern-indicator-dot"></span>
+        <div class="active-pattern-meta">
+          <span class="meta-label">ACTIVE CHANNEL RACK PATTERN</span>
+          <strong class="meta-title">
+            {{ activePlaylistRow()?.name || 'Pattern 1' }}
+            @if (selectedClip(); as clip) {
+              <span class="clip-beat-tag">
+                (Clip: Beat {{ clip.startBeat + 1 }}–{{ clip.startBeat + clip.durationBeats }})
+              </span>
+            }
+          </strong>
+        </div>
+      </div>
+
+      <div class="preset-group">
+        <span class="toolbar-label">
+          <i class="fa-solid fa-sliders"></i> LOAD PRESET:
+        </span>
+        @for (preset of presets; track preset.name) {
+          <button
+            type="button"
+            class="preset-chip"
+            [class.active]="activePresetName() === preset.name"
+            (click)="loadPreset(preset)"
+          >
+            {{ preset.name }}
+            <span class="preset-bpm">{{ preset.bpm }}</span>
+          </button>
+        }
+      </div>
+
+      <div class="pattern-actions">
+        <span class="notes-counter">
+          <strong>{{ activeNotesCount() }}</strong> hits
+        </span>
+        <button
+          type="button"
+          class="action-btn"
+          (click)="randomizePattern()"
+          title="Generate a Random Groove for This Pattern"
+        >
+          <i class="fa-solid fa-dice"></i>
+          <span>Randomize</span>
         </button>
-        <button (click)="playSoundPreview(sound)" class="playSoundPreview">
-          <i class="fa-regular fa-circle-play"></i>
+        <button
+          type="button"
+          class="action-btn danger-hover"
+          (click)="clearAllPatterns()"
+          title="Clear All Steps in This Pattern"
+        >
+          <i class="fa-solid fa-eraser"></i>
+          <span>Clear</span>
         </button>
-      </li>
-    </ul>
-    <button (click)="closeSoundSelector()" class="closeSoundSelectorButton">Kapat</button>
-  </div>
+        <button
+          type="button"
+          class="action-btn synth-add-btn"
+          [disabled]="tracks().length >= 10"
+          (click)="addSynthRow()"
+          title="Add 4-OSC Synthesizer & Piano Roll Channel"
+        >
+          <i class="fa-solid fa-wave-square"></i>
+          <span>Add 4-OSC Synth</span>
+        </button>
+        <button
+          type="button"
+          class="action-btn primary-action"
+          [disabled]="tracks().length >= 10"
+          (click)="addRow()"
+          title="Add New Sampler Channel"
+        >
+          <i class="fa-solid fa-plus"></i>
+          <span>Add Channel ({{ tracks().length }}/10)</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================== STEP SEQUENCER MATRIX (BEATMAKER) ==================== -->
+    <section class="sequencer-board">
+      <!-- 16-Step Timeline Header (Click any step to play from that step) -->
+      <div class="sequencer-header-row">
+        <div class="track-info-col-header">
+          <span>CHANNEL / INSTRUMENT</span>
+          <span class="Mix-hint">M / S / FX / VOL</span>
+        </div>
+
+        <div class="steps-ruler">
+          @for (step of stepIndices; track step) {
+            <div
+              class="step-marker clickable-step-marker"
+              [class.beat-head]="step % 4 === 0"
+              [class.active-step-marker]="isPlaying() && (currentStep() % 16) === step"
+              (click)="startPatternFromStep(step, $event)"
+              title="Play starting from Step {{ step + 1 }}"
+            >
+              <span class="step-num">{{ step + 1 }}</span>
+              <span class="step-led"></span>
+            </div>
+          }
+        </div>
+
+        <div class="track-actions-col-header">ACTIONS</div>
+      </div>
+
+      <!-- Track Rows -->
+      <div class="tracks-list">
+        @for (track of tracks(); track track.id; let rowIndex = $index) {
+          <div
+            class="track-row"
+            [class.synth-track-row]="isSynthTrack(track)"
+            [attr.data-accent]="track.accentColor"
+            [class.track-muted]="track.muted || (hasSoloTrack() && !track.solo)"
+            [class.track-triggered]="track.triggerPulse"
+          >
+            <!-- Left Column: Live Pad Trigger, Sound Selector, Mute/Solo/FX/Volume (+ 4-OSC & Octave Controls if Synth) -->
+            <div class="track-controls-panel" [class.synth-controls-panel]="isSynthTrack(track)">
+              <div class="track-controls-top-line">
+                <!-- Live Trigger Pad Button -->
+                <button
+                  type="button"
+                  class="live-hit-pad"
+                  [class.pulsing]="track.triggerPulse"
+                  (click)="triggerTrackPad(rowIndex)"
+                  title="Trigger Live (Shortcut: {{ rowIndex + 1 }})"
+                >
+                  <span class="pad-index">{{ rowIndex + 1 }}</span>
+                  @if (isSynthTrack(track)) {
+                    <i class="fa-solid fa-wave-square"></i>
+                  } @else {
+                    <i class="fa-solid fa-drum"></i>
+                  }
+                </button>
+
+                <!-- Sound / Synth Selector Button -->
+                <button
+                  type="button"
+                  class="sound-picker-btn"
+                  [class.synth-picker-active]="isSynthTrack(track)"
+                  (click)="openSoundSelector(rowIndex)"
+                  title="Change Channel Sound or 4-OSC Synthesizer"
+                >
+                  <span class="track-title">
+                    {{ track.name }}
+                    @if (isSynthTrack(track)) {
+                      <span class="synth-mini-tag">4-OSC</span>
+                    }
+                  </span>
+                  <span class="track-file">
+                    @if (isSynthTrack(track)) {
+                      {{ track.synthPatch?.presetName || 'Cyber Supersaw' }}
+                    } @else {
+                      {{ formatSoundLabel(track.sound) }}
+                    }
+                    <i class="fa-solid fa-chevron-down"></i>
+                  </span>
+                </button>
+
+                <!-- Mute / Solo / FX / Volume -->
+                <div class="channel-mix-controls">
+                  <button
+                    type="button"
+                    class="mix-btn mute-btn"
+                    [class.active]="track.muted"
+                    (click)="toggleMute(rowIndex)"
+                    title="Mute Channel"
+                  >
+                    M
+                  </button>
+                  <button
+                    type="button"
+                    class="mix-btn solo-btn"
+                    [class.active]="track.solo"
+                    (click)="toggleSolo(rowIndex)"
+                    title="Solo Channel"
+                  >
+                    S
+                  </button>
+                  <button
+                    type="button"
+                    class="mix-btn fx-btn"
+                    [class.active]="hasActiveEffects(track)"
+                    (click)="openFxModal(rowIndex, $event)"
+                    title="Channel Effects (Low Cut, High Cut, Chorus, Delay, Reverb)"
+                  >
+                    FX
+                    @if (getActiveEffectsCount(track) > 0) {
+                      <span class="fx-count-dot">{{ getActiveEffectsCount(track) }}</span>
+                    }
+                  </button>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1.2"
+                    step="0.05"
+                    [ngModel]="track.volume"
+                    (ngModelChange)="onTrackVolumeChange(rowIndex, $event)"
+                    class="track-vol-slider"
+                    title="Channel Volume"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Middle Column: Either Compact Melody Preview (for 4-OSC Synth) OR 16 Step Drum Pads -->
+            @if (isSynthTrack(track)) {
+              <button
+                type="button"
+                class="melody-preview-strip"
+                (click)="openSynthModal(rowIndex, 'pianoroll', $event)"
+                title="Click to Open Wide Piano Roll Editor (C1 – C7)"
+              >
+                <!-- Dynamic-Step Background Grid & Live Playhead -->
+                <div
+                  class="melody-preview-grid"
+                  [style.grid-template-columns]="'repeat(' + getTrackPianoRollSteps(track) + ', 1fr)'"
+                >
+                  @for (stepIndex of getTrackStepIndices(track); track stepIndex) {
+                    <div
+                      class="melody-step-col"
+                      [class.beat-head-col]="stepIndex % 4 === 0"
+                      [class.group-alt]="isBeatGroupAlt(stepIndex)"
+                      [class.active-playhead]="isPlaying() && (currentStep() % getTrackPianoRollSteps(track)) === stepIndex"
+                    ></div>
+                  }
+                </div>
+
+                <!-- Mini Melody Note Bars -->
+                <div class="melody-notes-layer">
+                  @for (note of track.pianoRollNotes || []; track note.id) {
+                    <div
+                      class="melody-mini-note"
+                      [class.playing]="isNotePlayingAtCurrentStep(track, note)"
+                      [style.left.%]="(note.startStep / getTrackPianoRollSteps(track)) * 100"
+                      [style.width.%]="(note.durationSteps / getTrackPianoRollSteps(track)) * 100"
+                      [style.top.%]="getMiniPreviewNoteTopPercent(track, note)"
+                    >
+                      <span class="melody-mini-note-label">{{ getNoteName(note.midi) }}</span>
+                    </div>
+                  }
+                </div>
+
+                <!-- Hover / Status Overlay Badge -->
+                <div class="melody-preview-badge">
+                  <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
+                  <span>Open Piano Roll ({{ (track.pianoRollNotes || []).length }} Notes • {{ getTrackPianoRollSteps(track) / 4 }} Beats)</span>
+                </div>
+              </button>
+            } @else {
+              <div class="steps-grid">
+                @for (isActive of track.steps; track $index; let stepIndex = $index) {
+                  <button
+                    type="button"
+                    class="step-pad"
+                    [class.group-alt]="isBeatGroupAlt(stepIndex)"
+                    [class.selected]="isActive"
+                    [class.playhead-active]="isPlaying() && (currentStep() % 16) === stepIndex"
+                    [class.glowing]="isPlaying() && (currentStep() % 16) === stepIndex && isActive"
+                    [class.non-selected-glowing]="isPlaying() && (currentStep() % 16) === stepIndex && !isActive"
+                    (click)="onBoxClick(rowIndex, stepIndex)"
+                    [attr.aria-label]="track.name + ' Step ' + (stepIndex + 1)"
+                  >
+                    <span class="pad-led"></span>
+                    <span class="pad-surface"></span>
+                  </button>
+                }
+              </div>
+            }
+
+            <!-- Right Column: Clear & Delete Track Actions -->
+            <div class="track-row-actions">
+              @if (isSynthTrack(track)) {
+                <button
+                  type="button"
+                  class="row-icon-btn synth-row-btn"
+                  (click)="openSynthModal(rowIndex, 'osc', $event)"
+                  title="4-OSC Synthesizer Settings"
+                >
+                  <i class="fa-solid fa-sliders"></i>
+                </button>
+              } @else {
+                <button
+                  type="button"
+                  class="row-icon-btn"
+                  (click)="openSoundSelector(rowIndex)"
+                  title="Select Sound"
+                >
+                  <i class="fa-solid fa-music"></i>
+                </button>
+              }
+              <button
+                type="button"
+                class="row-icon-btn"
+                (click)="clearTrackSteps(rowIndex)"
+                title="Clear Channel Steps"
+              >
+                <i class="fa-solid fa-rotate-left"></i>
+              </button>
+              <button
+                type="button"
+                class="row-icon-btn delete-row-btn"
+                [disabled]="tracks().length <= 1"
+                (click)="deleteRow(rowIndex, $event)"
+                title="Delete Channel"
+              >
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+
+    <!-- ==================== LIVE MPC PERFORMANCE PADS ==================== -->
+    <section class="live-pads-dock">
+      <div class="dock-header">
+        <div class="dock-title">
+          <i class="fa-solid fa-table-cells-large"></i>
+          <span>LIVE PERFORMANCE PADS (MPC MODE)</span>
+        </div>
+        <span class="shortcut-tip">
+          Shortcuts: <kbd>Space</kbd> Play/Stop • <kbd>1</kbd>-<kbd>{{ tracks().length }}</kbd> Live Pad • <kbd>←</kbd><kbd>→</kbd> Nudge Selected Clip by 1 Beat
+        </span>
+      </div>
+
+      <div class="mpc-pads-grid">
+        @for (track of tracks(); track track.id; let idx = $index) {
+          <button
+            type="button"
+            class="mpc-pad"
+            [attr.data-accent]="track.accentColor"
+            [class.pad-firing]="track.triggerPulse"
+            (mousedown)="triggerTrackPad(idx)"
+          >
+            <div class="mpc-pad-top">
+              <span class="mpc-key-badge">KEY {{ idx + 1 }}</span>
+              <span class="mpc-led"></span>
+            </div>
+            <div class="mpc-pad-Label">{{ track.name }}</div>
+            <div class="mpc-pad-sub">{{ formatSoundLabel(track.sound) }}</div>
+          </button>
+        }
+      </div>
+    </section>
+
+    <!-- ==================== DAW PLAYLIST / SONG TIMELINE SECTION ==================== -->
+    <section class="playlist-section">
+      <!-- Playlist Top Bar -->
+      <div class="playlist-toolbar">
+        <div class="playlist-title-group">
+          <div class="playlist-badge">
+            <i class="fa-solid fa-timeline"></i>
+            <span>SONG ARRANGEMENT (DAW PLAYLIST / TIMELINE)</span>
+          </div>
+          <p class="playlist-hint">
+            @if (isLoopSelectMode()) {
+              <strong>SELECT MODE ACTIVE:</strong> Drag across the top Bar / Beat ruler to select the <strong>region you want to play in a loop</strong>.
+            } @else {
+              Click any beat on the top Bar / Beat ruler to <strong>start playback from that position</strong>. Enable <strong>Select Mode</strong> (or hold <kbd>Shift</kbd> and drag on the ruler) to loop a specific range.
+            }
+          </p>
+        </div>
+
+        <div class="playlist-controls-group">
+          <!-- Play Full Song Button -->
+          <button
+            type="button"
+            class="song-play-btn"
+            [class.active-song]="isPlaying() && playbackMode() === 'song'"
+            (click)="playFullSong()"
+          >
+            <i
+              class="fa-solid"
+              [class.fa-stop]="isPlaying() && playbackMode() === 'song'"
+              [class.fa-play]="!(isPlaying() && playbackMode() === 'song')"
+            ></i>
+            <span>{{ isPlaying() && playbackMode() === 'song' ? 'STOP SONG' : 'PLAY FULL SONG' }}</span>
+          </button>
+
+          <!-- Loop Region Selection Mode & Controls -->
+          <div class="loop-controls-group" [class.select-mode-on]="isLoopSelectMode()">
+            <button
+              type="button"
+              class="loop-mode-btn"
+              [class.active]="isLoopSelectMode()"
+              (click)="toggleLoopSelectMode()"
+              title="Toggle Loop Region Selection Mode on Ruler"
+            >
+              <i class="fa-solid fa-crop-simple"></i>
+              <span>{{ isLoopSelectMode() ? 'Select Mode: ON' : 'Select Mode' }}</span>
+            </button>
+
+            <button
+              type="button"
+              class="loop-toggle-btn"
+              [class.active]="isLoopEnabled() && hasValidLoopRange()"
+              (click)="toggleLoopEnabled()"
+              title="Toggle Loop Playback for Selected Region"
+            >
+              <i class="fa-solid fa-repeat"></i>
+              @if (hasValidLoopRange()) {
+                <span>LOOP: {{ loopStartBeat()! + 1 }}–{{ loopEndBeat() }}</span>
+              } @else {
+                <span>LOOP</span>
+              }
+            </button>
+
+            @if (hasValidLoopRange()) {
+              <button
+                type="button"
+                class="loop-clear-btn"
+                (click)="clearLoopSelection()"
+                title="Clear Loop Region Selection"
+              >
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            }
+          </div>
+
+          <!-- 1-Beat Nudge Controls for Selected Clip -->
+          <div class="clip-nudge-group">
+            <span class="nudge-label">MOVE CLIP:</span>
+            <button
+              type="button"
+              class="nudge-btn"
+              [disabled]="!selectedClip()"
+              (click)="nudgeSelectedClip(-1)"
+              title="Nudge Selected Clip 1 Beat Left (Left Arrow)"
+            >
+              <i class="fa-solid fa-chevron-left"></i> -1
+            </button>
+            <button
+              type="button"
+              class="nudge-btn"
+              [disabled]="!selectedClip()"
+              (click)="nudgeSelectedClip(1)"
+              title="Nudge Selected Clip 1 Beat Right (Right Arrow)"
+            >
+              +1 <i class="fa-solid fa-chevron-right"></i>
+            </button>
+          </div>
+
+          <!-- Timeline Length & 4-Minute Song Controls -->
+          <div class="timeline-len-group">
+            <button
+              type="button"
+              class="len-btn"
+              [disabled]="totalTimelineBeats() <= 8"
+              (click)="adjustTimelineBeats(-4)"
+              title="Decrease Timeline Length by 4 Beats"
+            >
+              -4
+            </button>
+            <span class="len-readout">
+              {{ totalTimelineBeats() }} BEATS ({{ songDurationFormatted() }} MIN)
+            </span>
+            <button
+              type="button"
+              class="len-btn"
+              (click)="adjustTimelineBeats(4)"
+              title="Add +4 Beats (1 Bar)"
+            >
+              +4
+            </button>
+            <button
+              type="button"
+              class="len-btn"
+              (click)="adjustTimelineBeats(16)"
+              title="Add +16 Beats (4 Bars)"
+            >
+              +16
+            </button>
+            <button
+              type="button"
+              class="len-btn"
+              (click)="adjustTimelineBeats(64)"
+              title="Add +64 Beats (16 Bars)"
+            >
+              +64
+            </button>
+            <button
+              type="button"
+              class="len-btn four-min-btn"
+              (click)="setFourMinuteTimeline()"
+              title="Extend Song Length to 4 Minutes at Current BPM"
+            >
+              <i class="fa-regular fa-clock"></i> 4 Min
+            </button>
+          </div>
+
+          <!-- Horizontal Zoom Controls -->
+          <div class="timeline-len-group">
+            <span class="nudge-label">ZOOM:</span>
+            <button
+              type="button"
+              class="len-btn"
+              [disabled]="beatWidthPx() <= 24"
+              (click)="adjustBeatZoom(-6)"
+              title="Zoom Out Timeline"
+            >
+              <i class="fa-solid fa-magnifying-glass-minus"></i>
+            </button>
+            <button
+              type="button"
+              class="len-btn"
+              [disabled]="beatWidthPx() >= 72"
+              (click)="adjustBeatZoom(6)"
+              title="Zoom In Timeline"
+            >
+              <i class="fa-solid fa-magnifying-glass-plus"></i>
+            </button>
+          </div>
+
+          <!-- Add Playlist Row Button -->
+          <button
+            type="button"
+            class="action-btn primary-action"
+            (click)="addPlaylistRow()"
+          >
+            <i class="fa-solid fa-plus"></i>
+            <span>Add Row ({{ playlistRows().length }})</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 2-PANE SPLIT LAYOUT: Fixed 280px Left Column + Horizontally Scrollable Right Timeline -->
+      <div class="playlist-split-layout">
+        <!-- LEFT FIXED COLUMN: Pattern Headers (Identical 280px x 68px boxes) -->
+        <div class="playlist-left-column">
+          <div class="playlist-left-header">
+            <span>PLAYLIST ROWS (PATTERNS)</span>
+            <span>CLIP / DEL</span>
+          </div>
+
+          <div class="playlist-left-rows">
+            @for (row of playlistRows(); track row.id; let rowIdx = $index) {
+              <div
+                class="playlist-row-info"
+                [attr.data-accent]="row.accentColor"
+                [class.active-playlist-row]="activePlaylistRowId() === row.id"
+                [class.playlist-row-muted]="row.muted || (hasSoloPlaylistRow() && !row.solo)"
+                (click)="selectPlaylistRow(row)"
+              >
+                <div class="row-color-bar"></div>
+
+                <div class="row-text-wrap">
+                  <span class="playlist-row-name">{{ row.name }}</span>
+                  <span class="playlist-row-meta">
+                    {{ row.tracks.length }} Channels • {{ row.clips.length }} Clips
+                  </span>
+                </div>
+
+                <div class="playlist-row-btns" (click)="$event.stopPropagation()">
+                  <button
+                    type="button"
+                    class="mix-btn mute-btn"
+                    [class.active]="row.muted"
+                    (click)="togglePlaylistRowMute(rowIdx, $event)"
+                    title="Mute Row"
+                  >
+                    M
+                  </button>
+                  <button
+                    type="button"
+                    class="mix-btn solo-btn"
+                    [class.active]="row.solo"
+                    (click)="togglePlaylistRowSolo(rowIdx, $event)"
+                    title="Solo Row"
+                  >
+                    S
+                  </button>
+                  <button
+                    type="button"
+                    class="row-icon-btn add-clip-btn"
+                    (click)="addClipToRow(row, undefined, $event)"
+                    title="Add New Clip to This Row"
+                  >
+                    <i class="fa-solid fa-plus"></i>
+                  </button>
+                  <button
+                    type="button"
+                    class="row-icon-btn"
+                    (click)="duplicatePlaylistRow(rowIdx, $event)"
+                    title="Duplicate Row"
+                  >
+                    <i class="fa-regular fa-copy"></i>
+                  </button>
+                  <button
+                    type="button"
+                    class="row-icon-btn delete-row-btn"
+                    [disabled]="playlistRows().length <= 1"
+                    (click)="deletePlaylistRow(rowIdx, $event)"
+                    title="Delete Row"
+                  >
+                    <i class="fa-solid fa-trash-can"></i>
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- RIGHT SCROLLABLE TIMELINE VIEWPORT -->
+        <div
+          class="playlist-right-viewport"
+          #timelineViewport
+          (scroll)="onTimelineNativeScroll($event)"
+        >
+          <div
+            class="playlist-timeline-canvas"
+            [style.width.px]="totalTimelineWidthPx()"
+          >
+            <!-- Top Beat Ruler (Click to seek & play from beat, or drag in Loop Select Mode) -->
+            <div
+              class="playlist-beats-ruler"
+              [class.ruler-select-cursor]="isLoopSelectMode()"
+              [style.width.px]="totalTimelineWidthPx()"
+              [style.grid-template-columns]="'repeat(' + totalTimelineBeats() + ', ' + beatWidthPx() + 'px)'"
+            >
+              @for (beat of timelineBeats(); track beat) {
+                <div
+                  class="beat-ruler-cell"
+                  [class.bar-start]="beat % 4 === 0"
+                  [class.active-beat]="isPlaying() && playbackMode() === 'song' && currentSongBeat() === beat"
+                  [class.in-loop-range]="isBeatInLoopRange(beat)"
+                  [class.loop-start-cell]="hasValidLoopRange() && loopStartBeat() === beat"
+                  [class.loop-end-cell]="hasValidLoopRange() && loopEndBeat() === beat + 1"
+                  [class.loop-inactive]="hasValidLoopRange() && !isLoopEnabled()"
+                  (mousedown)="onRulerBeatMouseDown(beat, $event)"
+                  (mouseenter)="onRulerBeatMouseEnter(beat)"
+                  [attr.title]="
+                    isLoopSelectMode()
+                      ? 'Drag to select loop region (Beat ' + (beat + 1) + ')'
+                      : 'Start playback from Beat ' + (beat + 1)
+                  "
+                >
+                  @if (beat % 4 === 0) {
+                    <span class="bar-badge">BAR {{ (beat / 4) + 1 }}</span>
+                  }
+                  <span class="beat-number">{{ beat + 1 }}</span>
+                </div>
+              }
+            </div>
+
+            <!-- Timeline Rows (68px height each, locked to beatWidthPx columns) -->
+            <div class="playlist-right-rows">
+              @for (row of playlistRows(); track row.id) {
+                <div
+                  class="playlist-row-grid"
+                  [attr.data-accent]="row.accentColor"
+                  [class.playlist-row-muted]="row.muted || (hasSoloPlaylistRow() && !row.solo)"
+                  [style.width.px]="totalTimelineWidthPx()"
+                >
+                  <!-- Active Loop Region Highlight Band on Row -->
+                  @if (hasValidLoopRange()) {
+                    <div
+                      class="row-loop-region-band"
+                      [class.loop-band-disabled]="!isLoopEnabled()"
+                      [style.left.px]="loopLeftPx()"
+                      [style.width.px]="loopWidthPx()"
+                    ></div>
+                  }
+
+                  <!-- Background Beat Cells -->
+                  <div
+                    class="beat-cells-backdrop"
+                    [style.width.px]="totalTimelineWidthPx()"
+                    [style.grid-template-columns]="'repeat(' + totalTimelineBeats() + ', ' + beatWidthPx() + 'px)'"
+                  >
+                    @for (beat of timelineBeats(); track beat) {
+                      <div
+                        class="beat-cell"
+                        [class.bar-Start-cell]="beat % 4 === 0"
+                        [class.bar-alt-cell]="(beat % 8) >= 4"
+                        (click)="addClipToRow(row, beat, $event)"
+                        title="Click to add clip at Beat {{ beat + 1 }}"
+                      >
+                        <span class="cell-plus-hint">+</span>
+                      </div>
+                    }
+                  </div>
+
+                  <!-- Placed Clip Boxes -->
+                  @for (clip of row.clips; track clip.id) {
+                    <div
+                      class="playlist-clip-box"
+                      [class.selected-clip]="selectedClipId() === clip.id"
+                      [class.playing-clip]="isClipCurrentlyPlaying(row, clip)"
+                      [style.left.px]="clip.startBeat * beatWidthPx()"
+                      [style.width.px]="clip.durationBeats * beatWidthPx()"
+                      (mousedown)="onClipDragStart($event, row, clip)"
+                      (click)="selectPlaylistClip(row, clip, $event)"
+                      title="Click to view pattern in Channel Rack • Drag body to move clip"
+                    >
+                      <!-- Clip Top Bar -->
+                      <div class="clip-header">
+                        <span class="clip-title">
+                          <i class="fa-solid fa-arrows-left-right"></i>
+                          {{ clip.label }}
+                        </span>
+                        <span class="clip-beats-badge">
+                          {{ clip.startBeat + 1 }}–{{ clip.startBeat + clip.durationBeats }}
+                        </span>
+                        <button
+                          type="button"
+                          class="clip-delete-btn"
+                          (mousedown)="$event.stopPropagation()"
+                          (click)="deleteClip(row.id, clip.id, $event)"
+                          title="Delete Clip"
+                        >
+                          <i class="fa-solid fa-xmark"></i>
+                        </button>
+                      </div>
+
+                      <!-- Non-stretching, Repeating Melody & Pattern Preview Inside Clip -->
+                      <div class="clip-mini-preview">
+                        @for (cycleIdx of getClipRepeatCycles(row, clip); track cycleIdx) {
+                          <div
+                            class="clip-cycle-tile"
+                            [class.cycle-loop-divider]="cycleIdx > 0"
+                            [style.width.px]="getRowPatternBeats(row) * beatWidthPx()"
+                          >
+                            <!-- Synth Piano Roll Melody Bars (if row has a 4-OSC Synth track) -->
+                            @if (hasSynthInRow(row)) {
+                              <div class="clip-cycle-melody-layer">
+                                @for (item of getRowSynthNotes(row); track item.note.id) {
+                                  <span
+                                    class="clip-mini-melody-bar"
+                                    [style.left.%]="(item.note.startStep / getRowPatternSteps(row)) * 100"
+                                    [style.width.%]="(item.note.durationSteps / getRowPatternSteps(row)) * 100"
+                                    [style.top.%]="item.topPercent"
+                                  ></span>
+                                }
+                              </div>
+                            }
+
+                            <!-- Drum / Sampler Step Dots -->
+                            <div class="clip-cycle-drums-layer">
+                              @for (miniTrack of getRowDrumPreviewTracks(row); track miniTrack.id) {
+                                <div
+                                  class="mini-track-line"
+                                  [style.grid-template-columns]="'repeat(' + getRowPatternSteps(row) + ', 1fr)'"
+                                >
+                                  @for (stepActive of getRowDrumPreviewSteps(row, miniTrack); track $index) {
+                                    <span
+                                      class="mini-step-dot"
+                                      [class.on]="stepActive"
+                                    ></span>
+                                  }
+                                </div>
+                              }
+                            </div>
+                          </div>
+                        }
+                      </div>
+
+                      <!-- Right-Edge Resize Handle -->
+                      <div
+                        class="clip-resize-handle"
+                        (mousedown)="onClipResizeStart($event, row, clip)"
+                        (click)="$event.stopPropagation()"
+                        title="Drag right edge to resize clip duration"
+                      ></div>
+                    </div>
+                  }
+
+                  <!-- Song Mode Live Playhead Line -->
+                  @if (isPlaying() && playbackMode() === 'song' && songStep() >= 0) {
+                    <div
+                      class="playlist-playhead"
+                      [style.left.px]="songPlayheadPx()"
+                    ></div>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DEDICATED DAW TIMELINE HORIZONTAL SCROLLBAR BAR -->
+      <div class="playlist-scrollbar-bar">
+        <button
+          type="button"
+          class="scroll-step-btn"
+          (click)="scrollTimelineBy(-300)"
+          title="Scroll Timeline Left"
+        >
+          <i class="fa-solid fa-angles-left"></i> Scroll Left
+        </button>
+
+        <div class="scroll-slider-wrap">
+          <i class="fa-solid fa-arrows-left-right scroll-icon"></i>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            step="0.5"
+            [ngModel]="timelineScrollPercent()"
+            (ngModelChange)="onScrollSliderChange($event)"
+            class="timeline-scroll-slider"
+            title="Song Timeline Horizontal Scrollbar"
+          />
+        </div>
+
+        <button
+          type="button"
+          class="scroll-step-btn"
+          (click)="scrollTimelineBy(300)"
+          title="Scroll Timeline Right"
+        >
+          Scroll Right <i class="fa-solid fa-angles-right"></i>
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <!-- ==================== SOUND SELECTOR MODAL ==================== -->
+  @if (isSoundSelectorOpen()) {
+    <app-sound-selector-modal
+      [currentSound]="selectedTrack()?.sound || ''"
+      [trackName]="selectedTrack()?.name || ''"
+      (soundSelected)="selectSound($event)"
+      (close)="closeSoundSelector()"
+    />
+  }
+
+  <!-- ==================== CHANNEL FX RACK MODAL ==================== -->
+  @if (isFxModalOpen() && activeFxTrack(); as fxTrack) {
+    <app-track-fx-modal
+      [track]="fxTrack"
+      (effectsChanged)="onTrackEffectsChange($event)"
+      (previewSound)="previewActiveFxTrack()"
+      (close)="closeFxModal()"
+    />
+  }
+
+  <!-- ==================== 4-OSC SYNTHESIZER & PIANO ROLL MODAL ==================== -->
+  @if (isSynthModalOpen() && activeSynthTrack(); as synthTrack) {
+    <app-synth-editor-modal
+      [track]="synthTrack"
+      [currentStep]="isPlaying() ? (currentStep() % getTrackPianoRollSteps(synthTrack)) : -1"
+      [initialTab]="synthModalInitialTab()"
+      [bpm]="bpm()"
+      [swing]="swing()"
+      (patchChanged)="onTrackSynthPatchChange($event)"
+      (notesChanged)="onTrackPianoRollNotesChange($event)"
+      (stepsCountChanged)="onTrackPianoRollStepsChange($event)"
+      (stopMainSequencer)="stopSequencer()"
+      (close)="closeSynthModal()"
+    />
+  }
 </div>
-   
-  </div>
-</main>
-<div class = "background"></div>
-
-<!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
-<!-- * * * * * * * * * * * The content above * * * * * * * * * * * * -->
-<!-- * * * * * * * * * * is only a placeholder * * * * * * * * * * * -->
-<!-- * * * * * * * * * * and can be replaced.  * * * * * * * * * * * -->
-<!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
-<!-- * * * * * * * * * * End of Placeholder  * * * * * * * * * * * * -->
-<!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
-
 
 <router-outlet />
