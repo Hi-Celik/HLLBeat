@@ -109,3 +109,5 @@ The production build artifacts will be generated and optimized in the `dist/` di
 * **`1` – `9` Keys:** Live-trigger the corresponding track pad
 * **`Left / Right Arrow` Keys:** Nudge the selected playlist clip left or right by 1 beat
 * **`Shift + Ruler Drag`:** Select a custom loop region on the timeline ruler
+## Screenshot
+<img width="1223" height="948" alt="Main" src="https://github.com/user-attachments/assets/3507a14a-37cd-468e-a34c-55b63dd63fac" />
